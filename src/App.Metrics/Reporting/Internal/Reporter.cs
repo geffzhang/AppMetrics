@@ -1,15 +1,16 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using App.Metrics.Abstractions.Reporting;
+using App.Metrics.Configuration;
+using App.Metrics.Core.Internal;
 using App.Metrics.Core.Options;
-using App.Metrics.Internal;
-using App.Metrics.Reporting.Interfaces;
-using App.Metrics.Scheduling.Interfaces;
+using App.Metrics.Reporting.Abstractions;
+using App.Metrics.Scheduling.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace App.Metrics.Reporting.Internal
@@ -28,8 +29,18 @@ namespace App.Metrics.Reporting.Internal
 
         private readonly CounterOptions _successCounter;
 
-        public Reporter(ReportFactory reportFactory, IMetrics metrics, IScheduler scheduler, ILoggerFactory loggerFactory)
+        public Reporter(
+            AppMetricsOptions options,
+            ReportFactory reportFactory,
+            IMetrics metrics,
+            IScheduler scheduler,
+            ILoggerFactory loggerFactory)
         {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
             if (reportFactory == null)
             {
                 throw new ArgumentNullException(nameof(reportFactory));
@@ -50,7 +61,7 @@ namespace App.Metrics.Reporting.Internal
                 throw new ArgumentNullException(nameof(loggerFactory));
             }
 
-            _reportGenerator = new DefaultReportGenerator(loggerFactory);
+            _reportGenerator = new DefaultReportGenerator(options, loggerFactory);
             _metrics = metrics;
             _scheduler = scheduler;
             _loggerFactory = loggerFactory;
@@ -71,20 +82,31 @@ namespace App.Metrics.Reporting.Internal
             }
 
             _successCounter = new CounterOptions
-            {
-                Context = Constants.InternalMetricsContext,
-                MeasurementUnit = Unit.Items,
-                ResetOnReporting = true,
-                Name = "report_success"
-            };
+                              {
+                                  Context = Constants.InternalMetricsContext,
+                                  MeasurementUnit = Unit.Items,
+                                  ResetOnReporting = true,
+                                  Name = "report_success"
+                              };
 
             _failedCounter = new CounterOptions
+                             {
+                                 Context = Constants.InternalMetricsContext,
+                                 MeasurementUnit = Unit.Items,
+                                 ResetOnReporting = true,
+                                 Name = "report_failed"
+                             };
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            if (_scheduler != null)
             {
-                Context = Constants.InternalMetricsContext,
-                MeasurementUnit = Unit.Items,
-                ResetOnReporting = true,
-                Name = "report_failed"
-            };
+                using (_scheduler)
+                {
+                }
+            }
         }
 
         public void RunReports(IMetrics context, CancellationToken token)
@@ -125,30 +147,38 @@ namespace App.Metrics.Reporting.Internal
             }
         }
 
-        private Task ScheduleReport(IMetrics context, CancellationToken token,
-            KeyValuePair<Type, IMetricReporter> metricReporter, IReporterProvider provider)
+        private Task ScheduleReport(
+            IMetrics context,
+            CancellationToken token,
+            KeyValuePair<Type, IMetricReporter> metricReporter,
+            IReporterProvider provider)
         {
-            return _scheduler.Interval(metricReporter.Value.ReportInterval, TaskCreationOptions.LongRunning,
+            return _scheduler.Interval(
+                metricReporter.Value.ReportInterval,
+                TaskCreationOptions.LongRunning,
                 async () =>
                 {
                     try
                     {
-                        var result = await _reportGenerator.GenerateAsync(metricReporter.Value, context,
-                            provider.Filter, token);
+                        var result = await _reportGenerator.GenerateAsync(
+                            metricReporter.Value,
+                            context,
+                            provider.Filter,
+                            token);
 
                         if (result)
                         {
-                            _metrics.Increment(_successCounter, metricReporter.Key.Name);
+                            _metrics.Measure.Counter.Increment(_successCounter, metricReporter.Key.Name);
                         }
                         else
                         {
-                            _metrics.Increment(_failedCounter, metricReporter.Key.Name);
+                            _metrics.Measure.Counter.Increment(_failedCounter, metricReporter.Key.Name);
                             _logger.ReportFailed(metricReporter.Value);
                         }
-                    }                    
+                    }
                     catch (Exception ex)
                     {
-                        _metrics.Increment(_failedCounter, metricReporter.Key.Name);
+                        _metrics.Measure.Counter.Increment(_failedCounter, metricReporter.Key.Name);
                         _logger.ReportFailed(metricReporter.Value, ex);
                     }
                 },

@@ -1,6 +1,5 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
@@ -8,9 +7,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using App.Metrics.Abstractions.Filtering;
+using App.Metrics.Abstractions.Reporting;
+using App.Metrics.Configuration;
 using App.Metrics.Core;
-using App.Metrics.Internal;
-using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Health;
 using Microsoft.Extensions.Logging;
 
 namespace App.Metrics.Reporting.Internal
@@ -18,41 +19,47 @@ namespace App.Metrics.Reporting.Internal
     public class DefaultReportGenerator
     {
         private readonly ILogger _logger;
+        private readonly AppMetricsOptions _options;
 
-        public DefaultReportGenerator(ILoggerFactory loggerFactory)
+        public DefaultReportGenerator(AppMetricsOptions options, ILoggerFactory loggerFactory)
         {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
             if (loggerFactory == null)
             {
                 throw new ArgumentNullException(nameof(loggerFactory));
             }
 
+            _options = options;
             _logger = loggerFactory.CreateLogger<DefaultReportGenerator>();
         }
 
-        public Task<bool> GenerateAsync(IMetricReporter reporter,
+        public Task<bool> GenerateAsync(
+            IMetricReporter reporter,
             IMetrics metrics,
-            CancellationToken token)
-        {
-            return GenerateAsync(reporter, metrics, metrics.Advanced.GlobalFilter, token);
-        }
+            CancellationToken token) { return GenerateAsync(reporter, metrics, metrics.GlobalFilter, token); }
 
-        public async Task<bool> GenerateAsync(IMetricReporter reporter,
+        public async Task<bool> GenerateAsync(
+            IMetricReporter reporter,
             IMetrics metrics,
-            IMetricsFilter reporterMetricsFilter,
+            IFilterMetrics reporterMetricsFilter,
             CancellationToken token)
         {
-            var startTimestamp = _logger.IsEnabled(LogLevel.Information) ? Stopwatch.GetTimestamp() : 0;
+            var startTimestamp = _logger.IsEnabled(LogLevel.Trace) ? Stopwatch.GetTimestamp() : 0;
 
             _logger.ReportedStarted(reporter);
 
-            if (reporterMetricsFilter == default(IMetricsFilter))
+            if (reporterMetricsFilter == default(IFilterMetrics))
             {
-                reporterMetricsFilter = metrics.Advanced.GlobalFilter;
+                reporterMetricsFilter = metrics.GlobalFilter;
             }
 
             reporter.StartReportRun(metrics);
 
-            var data = metrics.Advanced.Data.ReadData(reporterMetricsFilter);
+            var data = metrics.Snapshot.Get(reporterMetricsFilter);
 
             if (data.Environment.Entries.Any() && reporterMetricsFilter.ReportEnvironment)
             {
@@ -61,50 +68,10 @@ namespace App.Metrics.Reporting.Internal
 
             if (reporterMetricsFilter.ReportHealthChecks)
             {
-                var healthStatus = await metrics.Advanced.Health.ReadStatusAsync(token);
-
-                var passed = healthStatus.Results.Where(r => r.Check.Status.IsHealthy()).ToArray();
-                var failed = healthStatus.Results.Where(r => r.Check.Status.IsUnhealthy()).ToArray();
-                var degraded = healthStatus.Results.Where(r => r.Check.Status.IsDegraded()).ToArray();
-
-                reporter.ReportHealth(metrics.Advanced.GlobalTags, passed, degraded, failed);
-
-                foreach (var check in passed)
-                {
-                    metrics.Increment(ApplicationHealthMetricRegistry.HealthyCheckCounter, check.Name);
-                }
-
-                foreach (var check in degraded)
-                {
-                    metrics.Increment(ApplicationHealthMetricRegistry.DegradedCheckCounter, check.Name);
-                }
-
-                foreach (var check in failed)
-                {
-                    metrics.Increment(ApplicationHealthMetricRegistry.UnhealthyCheckCounter, check.Name);
-                }
+                await ReportHealth(reporter, metrics, token);
             }
 
-            foreach (var contextValueSource in data.Contexts)
-            {
-                ReportMetricType(contextValueSource.Counters,
-                    c => { reporter.ReportMetric($"{contextValueSource.Context}", c); }, token);
-
-                ReportMetricType(contextValueSource.Gauges,
-                    g => { reporter.ReportMetric($"{contextValueSource.Context}", g); }, token);
-
-                ReportMetricType(contextValueSource.Histograms,
-                    h => { reporter.ReportMetric($"{contextValueSource.Context}", h); }, token);
-
-                ReportMetricType(contextValueSource.Meters,
-                    m => { reporter.ReportMetric($"{contextValueSource.Context}", m); }, token);
-
-                ReportMetricType(contextValueSource.Timers,
-                    t => { reporter.ReportMetric($"{contextValueSource.Context}", t); }, token);
-
-                ReportMetricType(contextValueSource.ApdexScores,
-                    t => { reporter.ReportMetric($"{contextValueSource.Context}", t); }, token);
-            }
+            ReportMetricTypes(reporter, token, data);
 
             var result = await reporter.EndAndFlushReportRunAsync(metrics);
 
@@ -130,6 +97,68 @@ namespace App.Metrics.Reporting.Internal
                 }
 
                 report(metric);
+            }
+        }
+
+        private static void ReportMetricTypes(IMetricReporter reporter, CancellationToken token, MetricsDataValueSource data)
+        {
+            foreach (var contextValueSource in data.Contexts)
+            {
+                ReportMetricType(
+                    contextValueSource.Counters,
+                    c => { reporter.ReportMetric($"{contextValueSource.Context}", c); },
+                    token);
+
+                ReportMetricType(
+                    contextValueSource.Gauges,
+                    g => { reporter.ReportMetric($"{contextValueSource.Context}", g); },
+                    token);
+
+                ReportMetricType(
+                    contextValueSource.Histograms,
+                    h => { reporter.ReportMetric($"{contextValueSource.Context}", h); },
+                    token);
+
+                ReportMetricType(
+                    contextValueSource.Meters,
+                    m => { reporter.ReportMetric($"{contextValueSource.Context}", m); },
+                    token);
+
+                ReportMetricType(
+                    contextValueSource.Timers,
+                    t => { reporter.ReportMetric($"{contextValueSource.Context}", t); },
+                    token);
+
+                ReportMetricType(
+                    contextValueSource.ApdexScores,
+                    t => { reporter.ReportMetric($"{contextValueSource.Context}", t); },
+                    token);
+            }
+        }
+
+        private async Task ReportHealth(IMetricReporter reporter, IMetrics metrics, CancellationToken token)
+        {
+            var healthStatus = await metrics.Health.ReadStatusAsync(token);
+
+            var passed = healthStatus.Results.Where(r => r.Check.Status.IsHealthy()).ToArray();
+            var failed = healthStatus.Results.Where(r => r.Check.Status.IsUnhealthy()).ToArray();
+            var degraded = healthStatus.Results.Where(r => r.Check.Status.IsDegraded()).ToArray();
+
+            reporter.ReportHealth(_options.GlobalTags, passed, degraded, failed);
+
+            foreach (var check in passed)
+            {
+                metrics.Measure.Counter.Increment(ApplicationHealthMetricRegistry.HealthyCheckCounter, check.Name);
+            }
+
+            foreach (var check in degraded)
+            {
+                metrics.Measure.Counter.Increment(ApplicationHealthMetricRegistry.DegradedCheckCounter, check.Name);
+            }
+
+            foreach (var check in failed)
+            {
+                metrics.Measure.Counter.Increment(ApplicationHealthMetricRegistry.UnhealthyCheckCounter, check.Name);
             }
         }
     }

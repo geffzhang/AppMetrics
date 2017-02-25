@@ -1,5 +1,6 @@
 using App.Metrics.Core;
 using App.Metrics.Core.Options;
+using App.Metrics.Tagging;
 
 namespace App.Metrics.Facts.Fixtures
 {
@@ -16,7 +17,7 @@ namespace App.Metrics.Facts.Fixtures
             {
                 Name = "test_counter",
                 MeasurementUnit = Unit.Requests,
-                Tags = new MetricTags().With("tag1", "value"),
+                Tags = new MetricTags("tag1", "value"),
                 Context = "test_context1"
             };
 
@@ -24,7 +25,7 @@ namespace App.Metrics.Facts.Fixtures
             {
                 Name = "test_meter",
                 MeasurementUnit = Unit.None,
-                Tags = new MetricTags().With("tag2", "value")
+                Tags = new MetricTags("tag2", "value")
             };
 
             var timerOptions = new TimerOptions
@@ -45,11 +46,11 @@ namespace App.Metrics.Facts.Fixtures
                 Name = "test_gauge"
             };
 
-            Metrics.Increment(counterOptions);
-            Metrics.Mark(meterOptions);
-            Metrics.Time(timerOptions, () => Metrics.Advanced.Clock.Advance(TimeUnit.Milliseconds, 10));
-            Metrics.Update(histogramOptions, 5);
-            Metrics.Gauge(gaugeOptions, () => 8);
+            Metrics.Measure.Counter.Increment(counterOptions);
+            Metrics.Measure.Meter.Mark(meterOptions);
+            Metrics.Measure.Timer.Time(timerOptions, () => Metrics.Clock.Advance(TimeUnit.Milliseconds, 10));
+            Metrics.Measure.Histogram.Update(histogramOptions, 5);
+            Metrics.Measure.Gauge.SetValue(gaugeOptions, () => 8);
         }
     }
 }

@@ -1,13 +1,12 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using App.Metrics.Core;
-using App.Metrics.Internal.Interfaces;
+using App.Metrics.Health;
+using App.Metrics.Health.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

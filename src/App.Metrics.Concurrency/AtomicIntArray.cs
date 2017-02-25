@@ -1,15 +1,14 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
-//Written by Iulian Margarintescu and will retain the same license as the Java Version
-//Original .NET Source by Iulian Margarintescu: https://github.com/etishor/ConcurrencyUtilities/blob/master/Src/ConcurrencyUtilities/AtomicIntArray.cs
-//Ported to a .NET Standard Project by Allan Hardy as the owner Iulian Margarintescu is unreachable and the source and packages are no longer maintained
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using App.Metrics.Concurrency.Internal;
 
+// Written by Iulian Margarintescu and will retain the same license as the Java Version
+// Original .NET Source by Iulian Margarintescu: https://github.com/etishor/ConcurrencyUtilities/blob/master/Src/ConcurrencyUtilities/AtomicIntArray.cs
+// Ported to a .NET Standard Project by Allan Hardy as the owner Iulian Margarintescu is unreachable and the source and packages are no longer maintained
 namespace App.Metrics.Concurrency
 {
     /// <summary>
@@ -25,6 +24,7 @@ namespace App.Metrics.Concurrency
             {
                 throw new ArgumentException("Length must be positive", nameof(length));
             }
+
             _array = new int[length];
         }
 
@@ -35,12 +35,16 @@ namespace App.Metrics.Concurrency
             {
                 clone[i] = source[i];
             }
+
             _array = clone;
         }
 
         /// <summary>
-        ///     The length of the underlying array
+        ///     Gets the length of the underlying array
         /// </summary>
+        /// <value>
+        ///     The length.
+        /// </value>
         public int Length => _array.Length;
 
         /// <summary>
@@ -50,7 +54,9 @@ namespace App.Metrics.Concurrency
         /// <returns>The size of the instance in bytes.</returns>
         public static int GetEstimatedFootprintInBytes(AtomicIntArray instance)
         {
-            return instance.Length * sizeof(int) + 16 + IntPtr.Size; // array reference & overhead
+            // ReSharper disable ArrangeRedundantParentheses SA1407
+            return (instance.Length * sizeof(int)) + 16 + IntPtr.Size; // array reference & overhead
+            // ReSharper restore ArrangeRedundantParentheses
         }
 
         /// <summary>
@@ -200,24 +206,6 @@ namespace App.Metrics.Concurrency
         public int Increment(int index, int value)
         {
             return Add(index, value);
-        }
-
-        /// <summary>
-        ///     From the Java Version:
-        ///     Eventually sets to the given value.
-        ///     The semantics are that the write is guaranteed not to be re-ordered with any previous write,
-        ///     but may be reordered with subsequent operations (or equivalently, might not be visible to other threads)
-        ///     until some other volatile write or synchronizing action occurs).
-        /// </summary>
-        /// <remarks>
-        ///     Currently implemented by calling Volatile.Write which is different from the java version.
-        ///     Not sure if it is possible on CLR to implement
-        /// </remarks>
-        /// <param name="index">index in the array</param>
-        /// <param name="value">The new value for this instance.</param>
-        public void LazySetValue(int index, int value)
-        {
-            Volatile.Write(ref _array[index], value);
         }
 
         /// <summary>

@@ -1,23 +1,20 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using App.Metrics;
 using App.Metrics.Configuration;
 using App.Metrics.DependencyInjection.Internal;
+using App.Metrics.Extensions.Middleware;
 using App.Metrics.Extensions.Middleware.DependencyInjection.Options;
-using App.Metrics.Extensions.Middleware.Middleware;
-using App.Metrics.Internal;
-using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Reporting.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 // ReSharper disable CheckNamespace
-
 namespace Microsoft.AspNetCore.Builder
-// ReSharper restore CheckNamespace
 {
+    // ReSharper restore CheckNamespace
     public static class AspNetMetricsAppBuilderExtensions
     {
         /// <summary>

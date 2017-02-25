@@ -1,14 +1,12 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
-using App.Metrics.Data;
-using Microsoft.DotNet.InternalAbstractions;
+using Microsoft.DotNet.PlatformAbstractions;
 
 namespace App.Metrics.Infrastructure
 {
@@ -19,7 +17,7 @@ namespace App.Metrics.Infrastructure
             var process = Process.GetCurrentProcess();
 
             var processName = StringExtensions.GetSafeString(() => process.ProcessName);
-            var osVersion = RuntimeEnvironment.OperatingSystemVersion;
+            var operatingSystemVersion = RuntimeEnvironment.OperatingSystemVersion;
             var os = RuntimeEnvironment.OperatingSystem;
             var processorCount = Environment.ProcessorCount.ToString();
             var machineName = process.MachineName;
@@ -31,8 +29,16 @@ namespace App.Metrics.Infrastructure
             var entryAssemblyName = StringExtensions.GetSafeString(() => entryAssembly.GetName().Name);
             var entryAssemblyVersion = StringExtensions.GetSafeString(() => entryAssembly.GetName().Version.ToString());
 
-            return new EnvironmentInfo(entryAssemblyName, entryAssemblyVersion, hostName, localTimeString, machineName,
-                os, osVersion, processName, processorCount);
+            return new EnvironmentInfo(
+                entryAssemblyName,
+                entryAssemblyVersion,
+                hostName,
+                localTimeString,
+                machineName,
+                os,
+                operatingSystemVersion,
+                processName,
+                processorCount);
         }
     }
 }

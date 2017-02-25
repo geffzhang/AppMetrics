@@ -1,15 +1,23 @@
-﻿using System;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using App.Metrics.Abstractions.ReservoirSampling;
 using App.Metrics.Apdex;
-using App.Metrics.Core;
-using App.Metrics.Data;
+using App.Metrics.Core.Internal;
+using App.Metrics.Counter;
 using App.Metrics.Facts.Reporting.Helpers;
-using App.Metrics.Internal;
-using App.Metrics.Internal.Test;
+using App.Metrics.Gauge;
+using App.Metrics.Health;
+using App.Metrics.Histogram;
+using App.Metrics.Infrastructure;
+using App.Metrics.Meter;
 using App.Metrics.Reporting;
-using App.Metrics.Sampling;
-using App.Metrics.Utils;
+using App.Metrics.ReservoirSampling.ExponentialDecay;
+using App.Metrics.Tagging;
+using App.Metrics.Timer;
 using Castle.Core.Internal;
 using FluentAssertions;
 using Xunit;
@@ -18,19 +26,57 @@ namespace App.Metrics.Facts.Reporting
 {
     public class StringReporterTests
     {
+        private readonly Lazy<IReservoir> _defaultReservoir;
+
+        public StringReporterTests()
+        {
+            var clock = new TestClock();
+            _defaultReservoir = new Lazy<IReservoir>(
+                () => new DefaultForwardDecayingReservoir(
+                    Constants.ReservoirSampling.DefaultSampleSize,
+                    Constants.ReservoirSampling.DefaultExponentialDecayFactor,
+                    clock,
+                    new TestTaskScheduler(clock)));
+        }
+
         [Fact]
         public void can_report_apdex()
         {
             var expected = StringReporterSamples.Apdex.ExtractStringReporterSampleFromResourceFile();
-            var clock = new TestClock();
             var sr = new StringReporter();
-            var reservoir = new ExponentiallyDecayingReservoir(Constants.ReservoirSampling.DefaultSampleSize,
-                Constants.ReservoirSampling.DefaultExponentialDecayFactor, clock, new TestTaskScheduler(clock));
-            var metric = new ApdexMetric(new ApdexProvider(reservoir, Constants.ReservoirSampling.DefaultApdexTSeconds), clock, true);
+            var clock = new TestClock();
+            var reservoir = new Lazy<IReservoir>(
+                () => new DefaultForwardDecayingReservoir(
+                    Constants.ReservoirSampling.DefaultSampleSize,
+                    Constants.ReservoirSampling.DefaultExponentialDecayFactor,
+                    clock,
+                    new TestTaskScheduler(clock)));
+            var metric = new DefaultApdexMetric(new ApdexProvider(reservoir, Constants.ReservoirSampling.DefaultApdexTSeconds), clock, true);
 
             metric.Track(1000);
 
-            sr.ReportMetric("test", new ApdexValueSource("apdex_name", metric, MetricTags.None));
+            sr.ReportMetric("test", new ApdexValueSource("apdex_name", metric, MetricTags.Empty));
+
+            AssertReportResult(sr.Result, expected);
+        }
+
+        [Fact (Skip = "failing on build server, doesn't look like encoding on line breaks.")]
+        public void can_report_apdex_with_group()
+        {
+            var expected = StringReporterSamples.ApdexWithGroup.ExtractStringReporterSampleFromResourceFile();
+            var sr = new StringReporter();
+            var clock = new TestClock();
+            var reservoir = new Lazy<IReservoir>(
+                () => new DefaultForwardDecayingReservoir(
+                    Constants.ReservoirSampling.DefaultSampleSize,
+                    Constants.ReservoirSampling.DefaultExponentialDecayFactor,
+                    clock,
+                    new TestTaskScheduler(clock)));
+            var metric = new DefaultApdexMetric(new ApdexProvider(reservoir, Constants.ReservoirSampling.DefaultApdexTSeconds), clock, true);
+
+            metric.Track(1000);
+
+            sr.ReportMetric("test", new ApdexValueSource("apdex_name", "testgroup", metric, MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }
@@ -41,7 +87,7 @@ namespace App.Metrics.Facts.Reporting
             var expected = StringReporterSamples.Counters.ExtractStringReporterSampleFromResourceFile();
             var sr = new StringReporter();
 
-            sr.ReportMetric("test", new CounterValueSource("counter_name", new CounterMetric(), Unit.None, MetricTags.None));
+            sr.ReportMetric("test", new CounterValueSource("counter_name", new DefaultCounterMetric(), Unit.None, MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }
@@ -64,7 +110,7 @@ namespace App.Metrics.Facts.Reporting
             var expected = StringReporterSamples.Gauges.ExtractStringReporterSampleFromResourceFile();
             var sr = new StringReporter();
 
-            sr.ReportMetric("test", new GaugeValueSource("gauge_name", new FunctionGauge(() => 2), Unit.None, MetricTags.None));
+            sr.ReportMetric("test", new GaugeValueSource("gauge_name", new FunctionGauge(() => 2), Unit.None, MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }
@@ -76,19 +122,19 @@ namespace App.Metrics.Facts.Reporting
             var globalTags = new GlobalMetricTags(new Dictionary<string, string> { { "tag_key", "tag_value" } });
 
             var healthyChecks = new[]
-            {
-                new HealthCheck.Result("healthy check", HealthCheckResult.Healthy("healthy message"))
-            }.AsEnumerable();
+                                {
+                                    new HealthCheck.Result("healthy check", HealthCheckResult.Healthy("healthy message"))
+                                }.AsEnumerable();
 
             var degradedChecks = new[]
-            {
-                new HealthCheck.Result("degraded check", HealthCheckResult.Degraded("degraded message"))
-            }.AsEnumerable();
+                                 {
+                                     new HealthCheck.Result("degraded check", HealthCheckResult.Degraded("degraded message"))
+                                 }.AsEnumerable();
 
             var unhealthyChecks = new[]
-            {
-                new HealthCheck.Result("unhealthy check", HealthCheckResult.Unhealthy("unhealthy message"))
-            }.AsEnumerable();
+                                  {
+                                      new HealthCheck.Result("unhealthy check", HealthCheckResult.Unhealthy("unhealthy message"))
+                                  }.AsEnumerable();
 
             var sr = new StringReporter();
 
@@ -102,13 +148,12 @@ namespace App.Metrics.Facts.Reporting
         {
             var expected = StringReporterSamples.Histograms.ExtractStringReporterSampleFromResourceFile();
             var sr = new StringReporter();
-            var metric = new HistogramMetric(SamplingType.ExponentiallyDecaying, Constants.ReservoirSampling.DefaultSampleSize,
-                Constants.ReservoirSampling.DefaultExponentialDecayFactor);
+            var metric = new DefaultHistogramMetric(_defaultReservoir);
 
             metric.Update(1000, "value1");
             metric.Update(2000, "value2");
 
-            sr.ReportMetric("test", new HistogramValueSource("histogram_name", metric, Unit.None, MetricTags.None));
+            sr.ReportMetric("test", new HistogramValueSource("histogram_name", metric, Unit.None, MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }
@@ -119,10 +164,10 @@ namespace App.Metrics.Facts.Reporting
             var expected = StringReporterSamples.Meters.ExtractStringReporterSampleFromResourceFile();
             var clock = new TestClock();
             var sr = new StringReporter();
-            var metric = new MeterMetric(clock, new TestTaskScheduler(clock));
+            var metric = new DefaultMeterMetric(clock, new TestTaskScheduler(clock));
             metric.Mark(1);
 
-            sr.ReportMetric("test", new MeterValueSource("meter_name", metric, Unit.None, TimeUnit.Milliseconds, MetricTags.None));
+            sr.ReportMetric("test", new MeterValueSource("meter_name", metric, Unit.None, TimeUnit.Milliseconds, MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }
@@ -133,15 +178,21 @@ namespace App.Metrics.Facts.Reporting
             var expected = StringReporterSamples.Timers.ExtractStringReporterSampleFromResourceFile();
             var sr = new StringReporter();
             var clock = new TestClock();
-            var histogram = new HistogramMetric(SamplingType.ExponentiallyDecaying, Constants.ReservoirSampling.DefaultSampleSize,
-                Constants.ReservoirSampling.DefaultExponentialDecayFactor);
-            var metric = new TimerMetric(histogram, clock);
+            var histogram = new DefaultHistogramMetric(_defaultReservoir);
+            var metric = new DefaultTimerMetric(histogram, clock);
 
             metric.Record(1000, TimeUnit.Milliseconds, "value1");
             metric.Record(2000, TimeUnit.Milliseconds, "value2");
 
-            sr.ReportMetric("test", new TimerValueSource("timer_name", metric, Unit.None, TimeUnit.Milliseconds,
-                TimeUnit.Milliseconds, MetricTags.None));
+            sr.ReportMetric(
+                "test",
+                new TimerValueSource(
+                    "timer_name",
+                    metric,
+                    Unit.None,
+                    TimeUnit.Milliseconds,
+                    TimeUnit.Milliseconds,
+                    MetricTags.Empty));
 
             AssertReportResult(sr.Result, expected);
         }

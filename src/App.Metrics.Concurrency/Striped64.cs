@@ -1,25 +1,24 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
-//Striped64 & LongAdder classes were ported from Java and had this copyright:
-
-//Written by Doug Lea with assistance from members of JCP JSR-166
-//Expert Group and released to the public domain, as explained at http://creativecommons.org/publicdomain/zero/1.0/
-
-//Source: http: //gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/jsr166e/Striped64.java?revision=1.8
-
-//This class was ported to .NET by Iulian Margarintescu and will retain the same license as the Java Version
-//Original .NET Source by Iulian Margarintescu: https://github.com/etishor/ConcurrencyUtilities/blob/master/Src/ConcurrencyUtilities/Striped64.cs
-
-//Ported to a .NET Standard Project by Allan Hardy as the owner Iulian Margarintescu is unreachable and the source and packages are no longer maintained
 
 using System;
 using System.Threading;
 
-// ReSharper disable TooWideLocalVariableScope
+// Striped64 & LongAdder classes were ported from Java and had this copyright:
+// Written by Doug Lea with assistance from members of JCP JSR-166
 
+// Expert Group and released to the public domain, as explained at http://creativecommons.org/publicdomain/zero/1.0/
+
+// Source: http: //gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/jsr166e/Striped64.java?revision=1.8
+
+// This class was ported to .NET by Iulian Margarintescu and will retain the same license as the Java Version
+
+// Original .NET Source by Iulian Margarintescu: https://github.com/etishor/ConcurrencyUtilities/blob/master/Src/ConcurrencyUtilities/Striped64.cs
+// Ported to a .NET Standard Project by Allan Hardy as the owner Iulian Margarintescu is unreachable and the source and packages are no longer maintained
+// ReSharper disable TooWideLocalVariableScope
 namespace App.Metrics.Concurrency
 {
+#pragma warning disable SA1407, SA1108, SA1306, SA1401
     /// <summary>
     ///     A class holding common representation and mechanics for classes supporting dynamic striping on 64bit values.
     /// </summary>
@@ -62,17 +61,14 @@ namespace App.Metrics.Concurrency
                    nonNullCells * Cell.SizeInBytes; // size of non null cells
         }
 
-        protected static int GetProbe()
-        {
-            return HashCode.Value.Code;
-        }
+        protected static int GetProbe() { return HashCode.Value.Code; }
 
         protected void LongAccumulate(long x, bool wasUncontended)
         {
             var h = GetProbe();
 
             var collide = false; // True if last slot nonempty
-            for (;;)
+            do
             {
                 Cell[] @as;
                 Cell a;
@@ -106,21 +102,34 @@ namespace App.Metrics.Concurrency
                                 {
                                     _cellsBusy = 0;
                                 }
+
                                 if (created)
+                                {
                                     break;
+                                }
+
                                 continue; // Slot is now non-empty
                             }
                         }
+
                         collide = false;
                     }
                     else if (!wasUncontended) // CAS already known to fail
+                    {
                         wasUncontended = true; // Continue after rehash
+                    }
                     else if (a.Value.CompareAndSwap(v = a.Value.GetValue(), v + x))
+                    {
                         break;
+                    }
                     else if (n >= ProcessorCount || Cells != @as)
+                    {
                         collide = false; // At max size or stale
+                    }
                     else if (!collide)
+                    {
                         collide = true;
+                    }
                     else if (_cellsBusy == 0 && CasCellsBusy())
                     {
                         try
@@ -130,7 +139,10 @@ namespace App.Metrics.Concurrency
                                 // Expand table unless stale
                                 var rs = new Cell[n << 1];
                                 for (var i = 0; i < n; ++i)
+                                {
                                     rs[i] = @as[i];
+                                }
+
                                 Cells = rs;
                             }
                         }
@@ -138,9 +150,11 @@ namespace App.Metrics.Concurrency
                         {
                             _cellsBusy = 0;
                         }
+
                         collide = false;
                         continue; // Retry with expanded table
                     }
+
                     h = AdvanceProbe(h);
                 }
                 else if (_cellsBusy == 0 && Cells == @as && CasCellsBusy())
@@ -161,12 +175,18 @@ namespace App.Metrics.Concurrency
                     {
                         _cellsBusy = 0;
                     }
+
                     if (init)
+                    {
                         break;
+                    }
                 }
                 else if (Base.CompareAndSwap(v = Base.GetValue(), v + x))
+                {
                     break; // Fall back on using volatileBase
+                }
             }
+            while (true);
         }
 
         private static int AdvanceProbe(int probe)
@@ -178,10 +198,7 @@ namespace App.Metrics.Concurrency
             return probe;
         }
 
-        private bool CasCellsBusy()
-        {
-            return Interlocked.CompareExchange(ref _cellsBusy, 1, 0) == 0;
-        }
+        private bool CasCellsBusy() { return Interlocked.CompareExchange(ref _cellsBusy, 1, 0) == 0; }
 
         protected sealed class Cell
         {
@@ -189,10 +206,7 @@ namespace App.Metrics.Concurrency
 
             public PaddedAtomicLong Value;
 
-            public Cell(long x)
-            {
-                Value = new PaddedAtomicLong(x);
-            }
+            public Cell(long x) { Value = new PaddedAtomicLong(x); }
         }
 
         private class ThreadHashCode
@@ -200,4 +214,5 @@ namespace App.Metrics.Concurrency
             public int Code = ThreadLocalRandom.Next(1, int.MaxValue);
         }
     }
+#pragma warning restore SA1407
 }

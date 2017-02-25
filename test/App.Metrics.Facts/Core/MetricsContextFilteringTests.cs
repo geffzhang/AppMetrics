@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using App.Metrics.Facts.Fixtures;
+using App.Metrics.Filtering;
 using App.Metrics.Internal;
 using FluentAssertions;
 using Xunit;
@@ -20,7 +21,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_context()
         {
             var filter = new DefaultMetricsFilter().WhereContext("test_context1");
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var counterValue = context.Counters.Single();
@@ -36,7 +37,7 @@ namespace App.Metrics.Facts.Core
         [Fact]
         public void can_filter_metrics_by_context_via_data_provider()
         {
-            var currentData = _metrics.Advanced.Data.ReadContext("test_context1");
+            var currentData = _metrics.Snapshot.GetForContext("test_context1");
 
             var counterValue = currentData.Counters.Single();
             counterValue.Name.Should().Be("test_counter");

@@ -1,9 +1,12 @@
+// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using System;
 using System.Linq;
-using App.Metrics.Data;
 using App.Metrics.Formatters.Json.Facts.Helpers;
 using App.Metrics.Formatters.Json.Facts.TestFixtures;
 using App.Metrics.Formatters.Json.Serialization;
+using App.Metrics.Meter;
 using FluentAssertions;
 using FluentAssertions.Json;
 using Newtonsoft.Json.Linq;
@@ -15,6 +18,7 @@ namespace App.Metrics.Formatters.Json.Facts
     public class MeterSerializationTests : IClassFixture<MetricProviderTestFixture>
     {
         private readonly MeterValueSource _meter;
+        private readonly MeterValueSource _meterWithGroup;
         private readonly ITestOutputHelper _output;
         private readonly MetricDataSerializer _serializer;
 
@@ -22,7 +26,8 @@ namespace App.Metrics.Formatters.Json.Facts
         {
             _output = output;
             _serializer = new MetricDataSerializer();
-            _meter = fixture.Meters.First();
+            _meter = fixture.Meters.First(x => x.Name == fixture.MeterNameDefault);
+            _meterWithGroup = fixture.Meters.First(x => x.Name == fixture.MeterNameWithGroup);
         }
 
         [Fact]
@@ -40,8 +45,8 @@ namespace App.Metrics.Formatters.Json.Facts
             result.Value.OneMinuteRate.Should().Be(_meter.Value.OneMinuteRate);
             result.Value.MeanRate.Should().Be(_meter.Value.MeanRate);
             result.Value.RateUnit.Should().Be(_meter.Value.RateUnit);
-            result.Tags.Should().ContainKeys(_meter.Tags.Select(t => t.Key));
-            result.Tags.Should().ContainValues(_meter.Tags.Select(t => t.Value));
+            result.Tags.Keys.Should().Contain(_meter.Tags.Keys.ToArray());
+            result.Tags.Values.Should().Contain(_meter.Tags.Values.ToArray());
         }
 
         [Fact]
@@ -50,6 +55,16 @@ namespace App.Metrics.Formatters.Json.Facts
             var expected = MetricType.Meter.SampleJson();
 
             var result = _serializer.Serialize(_meter).ParseAsJson();
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void produces_expected_json_with_group()
+        {
+            var expected = MetricTypeSamples.MeterWithGroup.SampleJson();
+
+            var result = _serializer.Serialize(_meterWithGroup).ParseAsJson();
 
             result.Should().Be(expected);
         }

@@ -1,11 +1,10 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-
 using System;
-using App.Metrics.Apdex.Interfaces;
-using App.Metrics.Internal;
-using App.Metrics.Sampling.Interfaces;
+using App.Metrics.Abstractions.ReservoirSampling;
+using App.Metrics.Apdex.Abstractions;
+using App.Metrics.Core.Internal;
 
 namespace App.Metrics.Apdex
 {
@@ -19,7 +18,7 @@ namespace App.Metrics.Apdex
     public class ApdexProvider : IApdexProvider
     {
         private readonly double _apdexTSeconds;
-        private readonly IReservoir _reservoir;
+        private readonly Lazy<IReservoir> _reservoir;
         private bool _disposed;
 
         /// <summary>
@@ -29,7 +28,7 @@ namespace App.Metrics.Apdex
         ///     The apdex T <see cref="Constants.ReservoirSampling">default</see> value will be used
         /// </remarks>
         /// <param name="reservoir">The reservoir used to sample values in order to caclulate an apdex score.</param>
-        public ApdexProvider(IReservoir reservoir)
+        public ApdexProvider(Lazy<IReservoir> reservoir)
             : this(reservoir, Constants.ReservoirSampling.DefaultApdexTSeconds)
         {
         }
@@ -39,24 +38,14 @@ namespace App.Metrics.Apdex
         /// </summary>
         /// <param name="reservoir">The reservoir used to sample values in order to caclulate an apdex score.</param>
         /// <param name="apdexTSeconds">The apdex t seconds used to calculate satisfied, tolerating and frustrating counts.</param>
-        public ApdexProvider(IReservoir reservoir, double apdexTSeconds)
+        public ApdexProvider(Lazy<IReservoir> reservoir, double apdexTSeconds)
         {
             _reservoir = reservoir;
             _apdexTSeconds = apdexTSeconds;
         }
 
         // <inheritdoc />
-        ~ApdexProvider()
-        {
-            Dispose(false);
-        }
-
-        // <inheritdoc />
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        public void Dispose() { Dispose(true); }
 
         /// <summary>
         ///     Releases unmanaged and - optionally - managed resources.
@@ -72,8 +61,12 @@ namespace App.Metrics.Apdex
                 if (disposing)
                 {
                     // Free any other managed objects here.
-                    var reservoir = _reservoir as IDisposable;
-                    reservoir?.Dispose();
+                    if (_reservoir.IsValueCreated)
+                    {
+                        using (_reservoir.Value as IDisposable)
+                        {
+                        }
+                    }
                 }
             }
 
@@ -83,21 +76,15 @@ namespace App.Metrics.Apdex
         // <inheritdoc />
         public ApdexSnapshot GetSnapshot(bool resetReservoir = false)
         {
-            var reservoirSnapshot = _reservoir.GetSnapshot(resetReservoir);
+            var reservoirSnapshot = _reservoir.Value.GetSnapshot(resetReservoir);
 
             return new ApdexSnapshot(reservoirSnapshot.Values, _apdexTSeconds);
         }
 
         // <inheritdoc />
-        public void Reset()
-        {
-            _reservoir.Reset();
-        }
+        public void Reset() { _reservoir.Value.Reset(); }
 
         // <inheritdoc />
-        public void Update(long value)
-        {
-            _reservoir.Update(value);
-        }
+        public void Update(long value) { _reservoir.Value.Update(value); }
     }
 }

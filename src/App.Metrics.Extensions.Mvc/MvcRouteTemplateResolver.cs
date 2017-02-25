@@ -1,6 +1,5 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Linq;
@@ -9,16 +8,14 @@ using Microsoft.AspNetCore.Routing;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.AspNetCore.Mvc.Internal
-// ReSharper restore CheckNamespace
 {
+    // ReSharper restore CheckNamespace
     public class MvcRouteTemplateResolver : IRouteNameResolver
     {
         private readonly IRouteNameResolver _routeNameResolver;
 
         public MvcRouteTemplateResolver()
-            : this(new AspNetCoreRouteTemplateResolver())
-        {
-        }
+            : this(new AspNetCoreRouteTemplateResolver()) { }
 
         public MvcRouteTemplateResolver(IRouteNameResolver routeNameResolver)
         {
@@ -40,7 +37,7 @@ namespace Microsoft.AspNetCore.Mvc.Internal
             }
 
             var attributeRouteHandler = routeData.Routers
-                    .FirstOrDefault(r => r.GetType().Name == "MvcAttributeRouteHandler")
+                                                 .FirstOrDefault(r => r.GetType().Name == "MvcAttributeRouteHandler")
                 as MvcAttributeRouteHandler;
 
             if (attributeRouteHandler == null)

@@ -1,6 +1,5 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using App.Metrics.Extensions.Middleware.DependencyInjection.Internal;
 using App.Metrics.Extensions.Middleware.DependencyInjection.Options;
@@ -8,10 +7,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 // ReSharper disable CheckNamespace
-
 namespace Microsoft.Extensions.DependencyInjection
-// ReSharper restore CheckNamespace
 {
+    // ReSharper restore CheckNamespace
     public static class MetricsHostBuilderExtensionsAspNetCore
     {
         public static IMetricsHostBuilder AddRequiredAspNetPlatformServices(this IMetricsHostBuilder builder)
@@ -23,8 +21,6 @@ namespace Microsoft.Extensions.DependencyInjection
             return builder;
         }
 
-        internal static void AddAspNetCoreServices(this IMetricsHostBuilder builder)
-        {
-        }
+        internal static void AddAspNetCoreServices(this IMetricsHostBuilder builder) { }
     }
 }

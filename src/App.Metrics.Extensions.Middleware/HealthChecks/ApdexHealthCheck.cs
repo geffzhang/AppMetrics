@@ -1,20 +1,22 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using App.Metrics.Core;
+using App.Metrics.Apdex;
 using App.Metrics.Extensions.Middleware.DependencyInjection.Options;
 using App.Metrics.Extensions.Middleware.Internal;
+using App.Metrics.Health;
 
 // ReSharper disable CheckNamespace
 namespace App.Metrics
-// ReSharper restore CheckNamespace
 {
+    // ReSharper restore CheckNamespace
     public class ApdexHealthCheck : HealthCheck
     {
+        private readonly string _context = HttpRequestMetricsRegistry.ContextName;
+        private readonly string _metricName = HttpRequestMetricsRegistry.ApdexScores.ApdexMetricName;
         private readonly Lazy<IMetrics> _metrics;
         private readonly AspNetMetricsOptions _options;
 
@@ -32,9 +34,7 @@ namespace App.Metrics
                 return Task.FromResult(HealthCheckResult.Ignore());
             }
 
-            var metricsContext = _metrics.Value.Advanced.Data.ReadContext(AspNetMetricsRegistry.Contexts.HttpRequests.ContextName);
-
-            var apdex = metricsContext.ApdexValueFor(AspNetMetricsRegistry.Contexts.HttpRequests.ApdexScores.ApdexMetricName);
+            var apdex = _metrics.Value.Snapshot.GetApdexValue(_context, _metricName);
 
             if (apdex.Score < 0.5)
             {

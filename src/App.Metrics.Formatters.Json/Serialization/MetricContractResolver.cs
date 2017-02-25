@@ -1,12 +1,17 @@
-﻿// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using App.Metrics.Data;
+using App.Metrics.Apdex;
+using App.Metrics.Core;
+using App.Metrics.Counter;
 using App.Metrics.Formatters.Json.Converters;
+using App.Metrics.Gauge;
+using App.Metrics.Histogram;
+using App.Metrics.Meter;
+using App.Metrics.Timer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
@@ -60,7 +65,7 @@ namespace App.Metrics.Formatters.Json.Serialization
 
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
         {
-            //DEVNOTE: Writable properties only
+            // DEVNOTE: Writable properties only
             var props = base.CreateProperties(type, memberSerialization);
             return props.Where(p => p.Writable).ToList();
         }

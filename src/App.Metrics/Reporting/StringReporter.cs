@@ -1,18 +1,18 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using App.Metrics.Core;
-using App.Metrics.Data;
-using App.Metrics.DependencyInjection.Internal;
+using App.Metrics.Abstractions.Reporting;
+using App.Metrics.Core.Abstractions;
+using App.Metrics.Core.Internal;
 using App.Metrics.Formatting.Humanize;
-using App.Metrics.Internal;
-using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Health;
+using App.Metrics.Infrastructure;
+using App.Metrics.Tagging;
 
 namespace App.Metrics.Reporting
 {
@@ -22,14 +22,17 @@ namespace App.Metrics.Reporting
         private StringBuilder _buffer;
         private bool _disposed;
 
-        public StringReporter() :
-            this(typeof(StringReporter).Name)
+        public StringReporter()
+            : this(typeof(StringReporter).Name)
         {
         }
 
         public StringReporter(string name)
         {
-            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (name == null)
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
 
             Name = name;
             _buffer = new StringBuilder();
@@ -41,11 +44,7 @@ namespace App.Metrics.Reporting
 
         public string Result => _buffer?.ToString();
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        public void Dispose() { Dispose(true); }
 
         public void Dispose(bool disposing)
         {
@@ -54,7 +53,6 @@ namespace App.Metrics.Reporting
                 if (disposing)
                 {
                     // Free any other managed objects here.
-
                     if (_buffer != null)
                     {
                         _buffer.Clear();
@@ -68,8 +66,9 @@ namespace App.Metrics.Reporting
 
         public Task<bool> EndAndFlushReportRunAsync(IMetrics metrics)
         {
-            _buffer.WriteMetricEndReport(Name,
-                metrics.Advanced.Clock.FormatTimestamp(metrics.Advanced.Clock.UtcDateTime));
+            _buffer.WriteMetricEndReport(
+                Name,
+                metrics.Clock.FormatTimestamp(metrics.Clock.UtcDateTime));
 
             return AppMetricsTaskCache.SuccessTask;
         }
@@ -80,7 +79,8 @@ namespace App.Metrics.Reporting
             _buffer.WriteEnvironmentInfo(environmentInfo);
         }
 
-        public void ReportHealth(GlobalMetricTags globalTags,
+        public void ReportHealth(
+            GlobalMetricTags globalTags,
             IEnumerable<HealthCheck.Result> healthyChecks,
             IEnumerable<HealthCheck.Result> degradedChecks,
             IEnumerable<HealthCheck.Result> unhealthyChecks)
@@ -116,7 +116,7 @@ namespace App.Metrics.Reporting
             failed.ForEach(c => _buffer.WriteHealthCheckResult(c));
         }
 
-        public void ReportMetric<T>(string context, MetricValueSource<T> valueSource)
+        public void ReportMetric<T>(string context, MetricValueSourceBase<T> valueSource)
         {
             WriteStartMetricType<T>(context);
             _buffer.WriteMetricName(valueSource);
@@ -125,8 +125,9 @@ namespace App.Metrics.Reporting
 
         public void StartReportRun(IMetrics metrics)
         {
-            _buffer.WriteMetricStartReport(Name,
-                metrics.Advanced.Clock.FormatTimestamp(metrics.Advanced.Clock.UtcDateTime));
+            _buffer.WriteMetricStartReport(
+                Name,
+                metrics.Clock.FormatTimestamp(metrics.Clock.UtcDateTime));
         }
 
         private void WriteStartMetricType<T>(string context)

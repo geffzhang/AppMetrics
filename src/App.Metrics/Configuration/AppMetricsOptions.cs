@@ -1,8 +1,8 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-
-using App.Metrics.Internal.Interfaces;
+using App.Metrics.Registry.Abstractions;
+using App.Metrics.Tagging;
 
 namespace App.Metrics.Configuration
 {
@@ -21,19 +21,6 @@ namespace App.Metrics.Configuration
         ///     The default context label used for grouping metrics within the <see cref="IMetricsRegistry" />.
         /// </value>
         public string DefaultContextLabel { get; set; } = DefaultContext;
-
-        /// <summary>
-        ///     Gets or sets The default <see cref="SamplingType" /> to use to generate the resevoir of values on
-        ///     <see cref="MetricType" /> which require sampling.
-        /// </summary>
-        /// <remarks>
-        ///     This sampling type is applied when there is no sampling type provided on a supported metric being recorded.
-        ///     Defaults to <see cref="SamplingType.ExponentiallyDecaying" />
-        /// </remarks>
-        /// <value>
-        ///     The default type of the sampling to use.
-        /// </value>
-        public SamplingType DefaultSamplingType { get; set; } = SamplingType.ExponentiallyDecaying;
 
         /// <summary>
         ///     Gets or sets the global tags to apply on all metrics when reporting.

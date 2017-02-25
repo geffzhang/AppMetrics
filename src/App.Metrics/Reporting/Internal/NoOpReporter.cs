@@ -1,22 +1,18 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-
 using System.Threading;
-using App.Metrics.Internal;
-using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Core.Internal;
+using App.Metrics.Reporting.Abstractions;
 
 namespace App.Metrics.Reporting.Internal
 {
     [AppMetricsExcludeFromCodeCoverage]
     internal sealed class NoOpReporter : IReporter
     {
-        public void Dispose()
-        {
-        }
+        /// <inheritdoc />
+        public void Dispose() { }
 
-        public void RunReports(IMetrics context, CancellationToken token)
-        {
-        }
+        public void RunReports(IMetrics context, CancellationToken token) { }
     }
 }

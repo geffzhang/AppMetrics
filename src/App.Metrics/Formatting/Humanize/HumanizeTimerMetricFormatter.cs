@@ -1,10 +1,9 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Text;
-using App.Metrics.Data;
+using App.Metrics.Timer;
 
 namespace App.Metrics.Formatting.Humanize
 {

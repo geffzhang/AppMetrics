@@ -1,9 +1,12 @@
-﻿using System;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System;
 using System.Linq;
-using App.Metrics.Data;
 using App.Metrics.Formatters.Json.Facts.Helpers;
 using App.Metrics.Formatters.Json.Facts.TestFixtures;
 using App.Metrics.Formatters.Json.Serialization;
+using App.Metrics.Histogram;
 using FluentAssertions;
 using FluentAssertions.Json;
 using Newtonsoft.Json.Linq;
@@ -15,6 +18,7 @@ namespace App.Metrics.Formatters.Json.Facts
     public class HistogramSerializationTests : IClassFixture<MetricProviderTestFixture>
     {
         private readonly HistogramValueSource _histogram;
+        private readonly HistogramValueSource _histogramWithGroup;
         private readonly ITestOutputHelper _output;
         private readonly MetricDataSerializer _serializer;
 
@@ -22,7 +26,8 @@ namespace App.Metrics.Formatters.Json.Facts
         {
             _output = output;
             _serializer = new MetricDataSerializer();
-            _histogram = fixture.Histograms.First();
+            _histogram = fixture.Histograms.First(x => x.Name == fixture.HistogramNameDefault);
+            _histogramWithGroup = fixture.Histograms.First(x => x.Name == fixture.HistogramNameWithGroup);
         }
 
         [Fact]
@@ -50,8 +55,8 @@ namespace App.Metrics.Formatters.Json.Facts
             result.Value.Percentile99.Should().Be(_histogram.Value.Percentile99);
             result.Value.Percentile999.Should().Be(_histogram.Value.Percentile999);
             result.Value.SampleSize.Should().Be(_histogram.Value.SampleSize);
-            result.Tags.Should().ContainKeys(_histogram.Tags.Select(t => t.Key));
-            result.Tags.Should().ContainValues(_histogram.Tags.Select(t => t.Value));
+            result.Tags.Keys.Should().Contain(_histogram.Tags.Keys.ToArray());
+            result.Tags.Values.Should().Contain(_histogram.Tags.Values.ToArray());
         }
 
         [Fact]
@@ -60,6 +65,16 @@ namespace App.Metrics.Formatters.Json.Facts
             var expected = MetricType.Histogram.SampleJson();
 
             var result = _serializer.Serialize(_histogram).ParseAsJson();
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void produces_expected_json_with_group()
+        {
+            var expected = MetricTypeSamples.HistogramWithGroup.SampleJson();
+
+            var result = _serializer.Serialize(_histogramWithGroup).ParseAsJson();
 
             result.Should().Be(expected);
         }

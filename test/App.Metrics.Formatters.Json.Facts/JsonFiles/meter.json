@@ -16,7 +16,7 @@
   "meanRate": 1.0,
   "oneMinuteRate": 2.0,
   "rateUnit": "s",
-  "name": "test2",
+  "name": "test_meter",
   "tags": {
     "host": "server1",
     "env": "staging"

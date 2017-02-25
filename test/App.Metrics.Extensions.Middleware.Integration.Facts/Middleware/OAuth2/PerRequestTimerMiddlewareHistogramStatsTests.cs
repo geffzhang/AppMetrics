@@ -1,7 +1,11 @@
-﻿using System.Net.Http;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System.Net.Http;
 using System.Threading.Tasks;
 using App.Metrics.Extensions.Middleware.Integration.Facts.Startup;
 using App.Metrics.Extensions.Middleware.Internal;
+using App.Metrics.Timer;
 using FluentAssertions;
 using Xunit;
 
@@ -25,9 +29,12 @@ namespace App.Metrics.Extensions.Middleware.Integration.Facts.Middleware.OAuth2
             await Client.GetAsync("/api/test/300ms");
             await Client.GetAsync("/api/test/30ms");
 
-            var metrics = Context.Advanced.Data.ReadContext(AspNetMetricsRegistry.Contexts.HttpRequests.ContextName);
+            var metrics = Context.Snapshot.GetForContext(HttpRequestMetricsRegistry.ContextName);
 
-            var timer1 = metrics.TimerValueFor("GET api/test/30ms");
+            var timer1 = Context.Snapshot.GetTimerValue(
+                HttpRequestMetricsRegistry.ContextName,
+                "GET api/test/30ms");
+
             timer1.Histogram.Min.Should().Be(30);
             timer1.Histogram.Max.Should().Be(30);
             timer1.Histogram.Mean.Should().Be(30);
@@ -37,7 +44,10 @@ namespace App.Metrics.Extensions.Middleware.Integration.Facts.Middleware.OAuth2
             timer1.Histogram.Percentile999.Should().Be(30);
             timer1.TotalTime.Should().Be(30);
 
-            var timer2 = metrics.TimerValueFor("GET api/test/300ms");
+            var timer2 = Context.Snapshot.GetTimerValue(
+                HttpRequestMetricsRegistry.ContextName,
+                "GET api/test/300ms");
+
             timer2.Histogram.Min.Should().Be(300);
             timer2.Histogram.Max.Should().Be(300);
             timer2.Histogram.Mean.Should().Be(300);

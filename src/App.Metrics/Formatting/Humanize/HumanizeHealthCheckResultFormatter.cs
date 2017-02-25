@@ -1,10 +1,9 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Text;
-using App.Metrics.Core;
+using App.Metrics.Health;
 
 namespace App.Metrics.Formatting.Humanize
 {
@@ -35,7 +34,8 @@ namespace App.Metrics.Formatting.Humanize
 
             if (healthCheckResult.Check.Status.IsHealthy())
             {
-                sb.AppendLine("\t" + Environment.NewLine + healthCheckResult.Name.FormatReadableMetricValue("PASSED: " + healthCheckResult.Check.Message));
+                sb.AppendLine(
+                    "\t" + Environment.NewLine + healthCheckResult.Name.FormatReadableMetricValue("PASSED: " + healthCheckResult.Check.Message));
                 return sb.ToString();
             }
 

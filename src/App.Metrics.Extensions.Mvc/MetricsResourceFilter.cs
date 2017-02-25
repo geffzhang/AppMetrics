@@ -1,9 +1,9 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Threading.Tasks;
+using App.Metrics.DependencyInjection.Internal;
 using App.Metrics.Extensions.Middleware.DependencyInjection.Internal;
 using App.Metrics.Internal;
 using Microsoft.AspNetCore.Http;
@@ -13,8 +13,8 @@ using Microsoft.Extensions.Logging;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.AspNetCore.Mvc.Filters
-// ReSharper restore CheckNamespace
 {
+    // ReSharper restore CheckNamespace
     public class MetricsResourceFilter : IAsyncResourceFilter
     {
         private readonly IRouteNameResolver _routeNameResolver;

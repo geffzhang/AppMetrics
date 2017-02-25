@@ -1,12 +1,11 @@
-// Copyright (c) Allan hardy. All rights reserved.
+﻿// Copyright (c) Allan Hardy. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using App.Metrics.Internal.Interfaces;
+using App.Metrics.Health.Abstractions;
 
 namespace App.Metrics.DependencyInjection.Internal
 {
@@ -16,10 +15,7 @@ namespace App.Metrics.DependencyInjection.Internal
         private static readonly TypeInfo ObjectTypeInfo = typeof(object).GetTypeInfo();
         private readonly IMetricsAssemblyProvider _assemblyProvider;
 
-        internal DefaultHealthCheckTypeProvider(IMetricsAssemblyProvider assemblyProvider)
-        {
-            _assemblyProvider = assemblyProvider;
-        }
+        internal DefaultHealthCheckTypeProvider(IMetricsAssemblyProvider assemblyProvider) { _assemblyProvider = assemblyProvider; }
 
         /// <inheritdoc />
         public IEnumerable<TypeInfo> HealthCheckTypes
@@ -50,25 +46,30 @@ namespace App.Metrics.DependencyInjection.Internal
             {
                 return false;
             }
+
             if (typeInfo.IsAbstract)
             {
                 return false;
             }
+
             // We only consider public top-level classes as health check. IsPublic returns false for nested
             // classes, regardless of visibility modifiers
             if (!typeInfo.IsPublic)
             {
                 return false;
             }
+
             if (typeInfo.ContainsGenericParameters)
             {
                 return false;
             }
+
             if (!typeInfo.Name.EndsWith(HealthCheckTypeName, StringComparison.OrdinalIgnoreCase) &&
                 !DerivesFromHealthCheck(typeInfo, candidateAssemblies))
             {
                 return false;
             }
+
             if (typeInfo.IsDefined(typeof(ObsoleteAttribute)))
             {
                 return false;
@@ -79,7 +80,7 @@ namespace App.Metrics.DependencyInjection.Internal
 
         private static bool DerivesFromHealthCheck(TypeInfo typeInfo, ISet<Assembly> candidateAssemblies)
         {
-            while (typeInfo != ObjectTypeInfo)
+            while (!Equals(typeInfo, ObjectTypeInfo))
             {
                 var baseTypeInfo = typeInfo.BaseType.GetTypeInfo();
 

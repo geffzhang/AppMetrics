@@ -1,9 +1,13 @@
+// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using System;
 using System.Linq;
-using App.Metrics.Data;
 using App.Metrics.Formatters.Json.Facts.Helpers;
 using App.Metrics.Formatters.Json.Facts.TestFixtures;
 using App.Metrics.Formatters.Json.Serialization;
+using App.Metrics.Gauge;
+using App.Metrics.Tagging;
 using FluentAssertions;
 using FluentAssertions.Json;
 using Newtonsoft.Json.Linq;
@@ -15,6 +19,7 @@ namespace App.Metrics.Formatters.Json.Facts
     public class GaugeSerializationTests : IClassFixture<MetricProviderTestFixture>
     {
         private readonly GaugeValueSource _gauge;
+        private readonly GaugeValueSource _gaugeWithGroup;
         private readonly ITestOutputHelper _output;
         private readonly MetricDataSerializer _serializer;
 
@@ -22,7 +27,21 @@ namespace App.Metrics.Formatters.Json.Facts
         {
             _output = output;
             _serializer = new MetricDataSerializer();
-            _gauge = fixture.Gauges.First();
+            _gauge = fixture.Gauges.First(x => x.Name == fixture.GaugeNameDefault);
+            _gaugeWithGroup = fixture.Gauges.First(x => x.Name == fixture.GaugeNameWithGroup);
+        }
+
+        [Fact]
+        public void can_create_gauge_from_value_source()
+        {
+            var valueSource = new GaugeValueSource("test", new FunctionGauge(() => 2.0), Unit.Bytes, MetricTags.Empty);
+
+            var gauge = GaugeMetric.FromGauge(valueSource);
+
+            gauge.Value.Should().Be(2.0);
+            gauge.Name.Should().Be("test");
+            gauge.Tags.Should().BeEmpty();
+            Assert.True(gauge.Unit == Unit.Bytes);
         }
 
         [Fact]
@@ -33,8 +52,8 @@ namespace App.Metrics.Formatters.Json.Facts
             result.Name.Should().BeEquivalentTo(_gauge.Name);
             result.Unit.Should().Be(_gauge.Unit);
             result.Value.Should().Be(_gauge.Value);
-            result.Tags.Should().ContainKeys(_gauge.Tags.Select(t => t.Key));
-            result.Tags.Should().ContainValues(_gauge.Tags.Select(t => t.Value));
+            result.Tags.Keys.Should().Contain(_gauge.Tags.Keys.ToArray());
+            result.Tags.Values.Should().Contain(_gauge.Tags.Values.ToArray());
         }
 
         [Fact]
@@ -43,6 +62,17 @@ namespace App.Metrics.Formatters.Json.Facts
             var expected = MetricType.Gauge.SampleJson();
 
             var result = _serializer.Serialize(_gauge).ParseAsJson();
+
+            result.Should().Be(expected);
+        }
+
+
+        [Fact]
+        public void produces_expected_json_with_group()
+        {
+            var expected = MetricTypeSamples.GaugeWithGroup.SampleJson();
+
+            var result = _serializer.Serialize(_gaugeWithGroup).ParseAsJson();
 
             result.Should().Be(expected);
         }

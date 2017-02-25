@@ -1,12 +1,16 @@
+// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using System;
-using System.Threading.Tasks;
+using App.Metrics.Abstractions.Filtering;
 using App.Metrics.Configuration;
 using App.Metrics.Core;
-using App.Metrics.Data;
+using App.Metrics.Core.Internal;
+using App.Metrics.Filtering;
+using App.Metrics.Health.Internal;
 using App.Metrics.Infrastructure;
-using App.Metrics.Internal;
-using App.Metrics.Internal.Interfaces;
-using App.Metrics.Utils;
+using App.Metrics.Registry.Abstractions;
+using App.Metrics.Registry.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace App.Metrics.Facts.Fixtures
@@ -17,35 +21,48 @@ namespace App.Metrics.Facts.Fixtures
 
         public MetricsFixture()
         {
-            var metricsLogger = _loggerFactory.CreateLogger<DefaultAdvancedMetrics>();
             var healthFactoryLogger = _loggerFactory.CreateLogger<HealthCheckFactory>();
             var clock = new TestClock();
-            var options = new AppMetricsOptions {DefaultSamplingType = SamplingType.LongTerm};
+            var options = new AppMetricsOptions();
             Func<string, IMetricContextRegistry> newContextRegistry = name => new DefaultMetricContextRegistry(name);
             var registry = new DefaultMetricsRegistry(_loggerFactory, options, clock, new EnvironmentInfoProvider(), newContextRegistry);
             var healthCheckFactory = new HealthCheckFactory(healthFactoryLogger);
-            var advancedContext = new DefaultAdvancedMetrics(metricsLogger, options, clock, new DefaultMetricsFilter(), registry, healthCheckFactory);
-            Metrics = new DefaultMetrics(options, registry, advancedContext);
+            var metricBuilderFactory = new DefaultMetricsBuilderFactory();
+            var filter = new DefaultMetricsFilter();
+            var dataManager = new DefaultMetricValuesProvider(filter, registry);
+            var healthStatusProvider = new DefaultHealthProvider(_loggerFactory.CreateLogger<DefaultHealthProvider>(), healthCheckFactory);
+            var metricsManagerFactory = new DefaultMeasureMetricsProvider(registry, metricBuilderFactory, clock);
+            var metricsManagerAdvancedFactory = new DefaultMetricsProvider(registry, metricBuilderFactory, clock);
+            var metricsManager = new DefaultMetricsManager(registry, _loggerFactory.CreateLogger<DefaultMetricsManager>());
+            Metrics = new DefaultMetrics(
+                clock,
+                filter,
+                metricsManagerFactory,
+                metricBuilderFactory,
+                metricsManagerAdvancedFactory,
+                dataManager,
+                metricsManager,
+                healthStatusProvider);
         }
+
+        public Func<IMetrics, MetricsDataValueSource> CurrentData =>
+            ctx => Metrics.Snapshot.Get();
+
+        public Func<IMetrics, IFilterMetrics, MetricsDataValueSource> CurrentDataWithFilter
+            => (ctx, filter) => Metrics.Snapshot.Get(filter);
 
         public IMetrics Metrics { get; }
 
-        public Func<IMetrics, MetricsDataValueSource> CurrentData =>
-            ctx => Metrics.Advanced.Data.ReadData();
-
-        public Func<IMetrics, IMetricsFilter, MetricsDataValueSource> CurrentDataWithFilter
-            => (ctx, filter) => Metrics.Advanced.Data.ReadData(filter);
-
-        public void Dispose()
-        {
-            Dispose(true);
-        }
+        public void Dispose() { Dispose(true); }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposing) return;
+            if (!disposing)
+            {
+                return;
+            }
 
-            Metrics?.Advanced.Data.Reset();
+            Metrics?.Manage.Reset();
         }
     }
 }

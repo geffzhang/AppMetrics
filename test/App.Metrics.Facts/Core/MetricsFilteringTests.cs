@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using App.Metrics.Facts.Fixtures;
+using App.Metrics.Filtering;
 using FluentAssertions;
 using Xunit;
 
@@ -19,7 +20,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_context()
         {
             var filter = new DefaultMetricsFilter().WhereMetricName(name => name == "test_gauge");
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var gaugeValue = context.Gauges.FirstOrDefault();
@@ -36,7 +37,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_counters()
         {
             var filter = new DefaultMetricsFilter().WhereType(MetricType.Counter);
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var counterValue = context.Counters.Single();
@@ -53,7 +54,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_gauge()
         {
             var filter = new DefaultMetricsFilter().WhereType(MetricType.Gauge);
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var gaugeValue = context.Gauges.Single();
@@ -70,7 +71,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_histograms()
         {
             var filter = new DefaultMetricsFilter().WhereType(MetricType.Histogram);
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var histogramValue = context.Histograms.Single();
@@ -87,7 +88,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_meters()
         {
             var filter = new DefaultMetricsFilter().WhereType(MetricType.Meter);
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var meterValue = context.Meters.Single();
@@ -104,7 +105,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_name_starting_with()
         {
             var filter = new DefaultMetricsFilter().WhereMetricNameStartsWith("test_");
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var counterValue = context.Counters.FirstOrDefault();
@@ -124,13 +125,13 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_tags()
         {
             var filter = new DefaultMetricsFilter().WhereMetricTaggedWithKeyValue(new TagKeyValueFilter { { "tag1", "value1" } });
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var counterValue = context.Counters.Single();
 
-            counterValue.Tags.Should().ContainKey("tag1");
-            counterValue.Tags.Should().ContainValue("value1");
+            counterValue.Tags.Keys.Should().Contain("tag1");
+            counterValue.Tags.Values.Should().Contain("value1");
 
             Assert.Null(context.Gauges.FirstOrDefault());
             Assert.Null(context.Meters.FirstOrDefault());
@@ -142,14 +143,14 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_tags_keys()
         {
             var filter = new DefaultMetricsFilter().WhereMetricTaggedWithKey("tag1", "tag2");
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var counterValue = context.Counters.Single();
             var meterValue = context.Meters.Single();
 
-            counterValue.Tags.Should().ContainKey("tag1");
-            meterValue.Tags.Should().ContainKey("tag2");
+            counterValue.Tags.Keys.Should().Contain("tag1");
+            meterValue.Tags.Keys.Should().Contain("tag2");
 
             Assert.Null(context.Gauges.FirstOrDefault());
             Assert.Null(context.Histograms.FirstOrDefault());
@@ -160,7 +161,7 @@ namespace App.Metrics.Facts.Core
         public void can_filter_metrics_by_timers()
         {
             var filter = new DefaultMetricsFilter().WhereType(MetricType.Timer);
-            var currentData = _metrics.Advanced.Data.ReadData(filter);
+            var currentData = _metrics.Snapshot.Get(filter);
             var context = currentData.Contexts.Single();
 
             var timerValue = context.Timers.Single();

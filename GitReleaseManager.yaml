@@ -16,6 +16,8 @@ issue-labels-include:
 - enhancement
 - breaking change
 - documentation
-issue-labels-exclude:
 - refactoring
+- investigation
+issue-labels-exclude:
 - wontfix
+- duplicate

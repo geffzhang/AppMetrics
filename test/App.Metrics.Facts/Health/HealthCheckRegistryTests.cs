@@ -1,11 +1,17 @@
-﻿using System;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System;
 using System.Threading.Tasks;
 using App.Metrics.Configuration;
-using App.Metrics.Core;
+using App.Metrics.Core.Internal;
+using App.Metrics.Filtering;
+using App.Metrics.Health;
+using App.Metrics.Health.Abstractions;
+using App.Metrics.Health.Internal;
 using App.Metrics.Infrastructure;
-using App.Metrics.Internal;
-using App.Metrics.Internal.Interfaces;
-using App.Metrics.Utils;
+using App.Metrics.Registry.Abstractions;
+using App.Metrics.Registry.Internal;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -22,15 +28,35 @@ namespace App.Metrics.Facts.Health
         {
             _metircsSetup = healthCheckFactory =>
             {
-                var metricsLogger = LoggerFactory.CreateLogger<DefaultAdvancedMetrics>();
                 var clock = new TestClock();
                 var options = new AppMetricsOptions();
                 Func<string, IMetricContextRegistry> newContextRegistry = name => new DefaultMetricContextRegistry(name);
-                var registry = new DefaultMetricsRegistry(LoggerFactory, options, clock, new EnvironmentInfoProvider(),
+                var registry = new DefaultMetricsRegistry(
+                    LoggerFactory,
+                    options,
+                    clock,
+                    new EnvironmentInfoProvider(),
                     newContextRegistry);
-                var advancedContext = new DefaultAdvancedMetrics(metricsLogger, options, clock, new DefaultMetricsFilter(), registry,
-                    healthCheckFactory);
-                return new DefaultMetrics(options, registry, advancedContext);
+                var metricBuilderFactory = new DefaultMetricsBuilderFactory();
+                var filter = new DefaultMetricsFilter();
+                var healthManager = new DefaultHealthProvider(LoggerFactory.CreateLogger<DefaultHealthProvider>(), healthCheckFactory);
+                var dataManager = new DefaultMetricValuesProvider(
+                    filter,
+                    registry);
+
+                var metricsManagerFactory = new DefaultMeasureMetricsProvider(registry, metricBuilderFactory, clock);
+                var metricsManagerAdvancedFactory = new DefaultMetricsProvider(registry, metricBuilderFactory, clock);
+                var metricsManager = new DefaultMetricsManager(registry, LoggerFactory.CreateLogger<DefaultMetricsManager>());
+
+                return new DefaultMetrics(
+                    clock,
+                    filter,
+                    metricsManagerFactory,
+                    metricBuilderFactory,
+                    metricsManagerAdvancedFactory,
+                    dataManager,
+                    metricsManager,
+                    healthManager);
             };
         }
 
@@ -51,7 +77,7 @@ namespace App.Metrics.Facts.Health
 
             var metrics = _metircsSetup(_healthCheckFactory);
 
-            var status = await metrics.Advanced.Health.ReadStatusAsync();
+            var status = await metrics.Health.ReadStatusAsync();
 
             status.Status.Should().Be(HealthCheckStatus.Degraded);
             status.Results.Length.Should().Be(2);
@@ -66,7 +92,7 @@ namespace App.Metrics.Facts.Health
 
             var metrics = _metircsSetup(_healthCheckFactory);
 
-            var status = await metrics.Advanced.Health.ReadStatusAsync();
+            var status = await metrics.Health.ReadStatusAsync();
 
             status.Status.Should().Be(HealthCheckStatus.Unhealthy);
             status.Results.Length.Should().Be(2);
@@ -80,7 +106,7 @@ namespace App.Metrics.Facts.Health
 
             var metrics = _metircsSetup(_healthCheckFactory);
 
-            var status = await metrics.Advanced.ReadStatusAsync();
+            var status = await metrics.Health.ReadStatusAsync();
 
             status.Status.Should().Be(HealthCheckStatus.Healthy);
             status.Results.Length.Should().Be(2);
@@ -95,7 +121,7 @@ namespace App.Metrics.Facts.Health
 
             var metrics = _metircsSetup(_healthCheckFactory);
 
-            var status = await metrics.Advanced.Health.ReadStatusAsync();
+            var status = await metrics.Health.ReadStatusAsync();
 
             status.Status.Should().Be(HealthCheckStatus.Unhealthy);
             status.Results.Length.Should().Be(3);

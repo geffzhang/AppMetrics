@@ -1,11 +1,18 @@
-﻿using System.Collections.Generic;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using App.Metrics.Core;
+using App.Metrics.Abstractions.Reporting;
+using App.Metrics.Configuration;
 using App.Metrics.Data;
 using App.Metrics.Facts.Fixtures;
-using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Filtering;
+using App.Metrics.Health;
+using App.Metrics.Infrastructure;
 using App.Metrics.Reporting.Internal;
+using App.Metrics.Tagging;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,7 +27,7 @@ namespace App.Metrics.Facts.Reporting
         public ReportGeneratorTests(MetricsReportingFixture fixture)
         {
             _metrics = fixture.Metrics;
-            _reportGenerator = new DefaultReportGenerator(new LoggerFactory());
+            _reportGenerator = new DefaultReportGenerator(new AppMetricsOptions(), new LoggerFactory());
         }
 
         [Fact]
@@ -40,16 +47,20 @@ namespace App.Metrics.Facts.Reporting
         public async Task can_disable_reporting_health()
         {
             var metricReporter = new Mock<IMetricReporter>();
-            metricReporter.Setup(x => x.ReportHealth(It.IsAny<GlobalMetricTags>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>()));
+            metricReporter.Setup(
+                x => x.ReportHealth(
+                    It.IsAny<GlobalMetricTags>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>()));
             var token = CancellationToken.None;
             var filter = new DefaultMetricsFilter().WithHealthChecks(false);
 
             await _reportGenerator.GenerateAsync(metricReporter.Object, _metrics, filter, token);
 
-            metricReporter.Verify(p => p.ReportHealth(It.IsAny<GlobalMetricTags>(),
+            metricReporter.Verify(
+                p => p.ReportHealth(
+                    It.IsAny<GlobalMetricTags>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>()),
@@ -72,15 +83,19 @@ namespace App.Metrics.Facts.Reporting
         public async Task reports_health()
         {
             var metricReporter = new Mock<IMetricReporter>();
-            metricReporter.Setup(x => x.ReportHealth(It.IsAny<GlobalMetricTags>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>(),
-                It.IsAny<IEnumerable<HealthCheck.Result>>()));
+            metricReporter.Setup(
+                x => x.ReportHealth(
+                    It.IsAny<GlobalMetricTags>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>(),
+                    It.IsAny<IEnumerable<HealthCheck.Result>>()));
             var token = CancellationToken.None;
 
             await _reportGenerator.GenerateAsync(metricReporter.Object, _metrics, token);
 
-            metricReporter.Verify(p => p.ReportHealth(It.IsAny<GlobalMetricTags>(),
+            metricReporter.Verify(
+                p => p.ReportHealth(
+                    It.IsAny<GlobalMetricTags>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>(),
                     It.IsAny<IEnumerable<HealthCheck.Result>>()),

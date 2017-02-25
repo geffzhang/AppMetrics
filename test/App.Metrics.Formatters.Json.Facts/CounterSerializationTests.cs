@@ -1,6 +1,9 @@
-﻿using System;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System;
 using System.Linq;
-using App.Metrics.Data;
+using App.Metrics.Counter;
 using App.Metrics.Formatters.Json.Facts.Helpers;
 using App.Metrics.Formatters.Json.Facts.TestFixtures;
 using App.Metrics.Formatters.Json.Serialization;
@@ -15,6 +18,7 @@ namespace App.Metrics.Formatters.Json.Facts
     public class CounterSerializationTests : IClassFixture<MetricProviderTestFixture>
     {
         private readonly CounterValueSource _counter;
+        private readonly CounterValueSource _counterWithGroup;
         private readonly ITestOutputHelper _output;
         private readonly MetricDataSerializer _serializer;
 
@@ -23,6 +27,9 @@ namespace App.Metrics.Formatters.Json.Facts
             _output = output;
             _serializer = new MetricDataSerializer();
             _counter = fixture.Counters.First();
+
+            _counter = fixture.Counters.First(x => x.Name == fixture.CounterNameDefault);
+            _counterWithGroup = fixture.Counters.First(x => x.Name == fixture.CounterNameWithGroup);
         }
 
         [Fact]
@@ -36,8 +43,9 @@ namespace App.Metrics.Formatters.Json.Facts
             result.Unit.Should().Be(_counter.Unit);
             result.Value.Count.Should().Be(_counter.Value.Count);
             result.Value.Items.Should().BeEquivalentTo(_counter.Value.Items);
-            result.Tags.Should().ContainKeys(_counter.Tags.Select(t => t.Key));
-            result.Tags.Should().ContainValues(_counter.Tags.Select(t => t.Value));
+
+            result.Tags.Keys.Should().Contain(_counter.Tags.Keys.ToArray());
+            result.Tags.Values.Should().Contain(_counter.Tags.Values.ToArray());
         }
 
         [Fact]
@@ -46,6 +54,16 @@ namespace App.Metrics.Formatters.Json.Facts
             var expected = MetricType.Counter.SampleJson();
 
             var result = _serializer.Serialize(_counter).ParseAsJson();
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void produces_expected_json_with_group()
+        {
+            var expected = MetricTypeSamples.CounterWithGroup.SampleJson();
+
+            var result = _serializer.Serialize(_counterWithGroup).ParseAsJson();
 
             result.Should().Be(expected);
         }

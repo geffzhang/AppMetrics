@@ -1,73 +1,57 @@
-using App.Metrics.Core.Interfaces;
-using App.Metrics.Data;
-using App.Metrics.Data.Interfaces;
+﻿// Copyright (c) Allan Hardy. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using App.Metrics.Abstractions.MetricTypes;
+using App.Metrics.Counter;
+using App.Metrics.Tagging;
 
 namespace App.Metrics.Facts
 {
     public class CustomCounter : ICounterMetric
     {
-        public CounterValue Value => new CounterValue(10L, new CounterValue.SetItem[0]);
+        /// <inheritdoc />
+        public CounterValue Value => GetValue();
 
-        public void Decrement()
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement() { }
 
-        public void Decrement(long value)
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement(string setItem) { }
 
-        public void Decrement(string item)
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement(MetricSetItem setItem) { }
 
-        public void Decrement(string item, long value)
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement(long amount) { }
 
-        public void Decrement(MetricItem item)
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement(string setItem, long amount) { }
 
-        public void Decrement(MetricItem item, long amount)
-        {
-        }
+        /// <inheritdoc />
+        public void Decrement(MetricSetItem setItem, long amount) { }
 
-        public CounterValue GetValue(bool resetMetric = false)
-        {
-            return Value;
-        }
+        /// <inheritdoc />
+        public CounterValue GetValue(bool resetMetric = false) { return new CounterValue(1L); }
 
-        public void Increment()
-        {
-        }
+        /// <inheritdoc />
+        public void Increment() { }
 
-        public void Increment(long value)
-        {
-        }
+        /// <inheritdoc />
+        public void Increment(string setItem) { }
 
-        public void Increment(string item)
-        {
-        }
+        /// <inheritdoc />
+        public void Increment(MetricSetItem setItem) { }
 
-        public void Increment(string item, long value)
-        {
-        }
+        /// <inheritdoc />
+        public void Increment(long amount) { }
 
-        public void Increment(MetricItem item)
-        {
-        }
+        /// <inheritdoc />
+        public void Increment(string setItem, long amount) { }
 
-        public void Increment(MetricItem item, long amount)
-        {
-        }
+        /// <inheritdoc />
+        public void Increment(MetricSetItem setItem, long amount) { }
 
-        public bool Merge(IMetricValueProvider<CounterValue> other)
-        {
-            return true;
-        }
-
-        public void Reset()
-        {
-        }
+        /// <inheritdoc />
+        public void Reset() { }
     }
 }

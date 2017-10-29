@@ -1,16 +1,13 @@
-﻿// Copyright (c) Allan Hardy. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+﻿// <copyright file="DefaultMetricValuesProviderTests.cs" company="Allan Hardy">
+// Copyright (c) Allan Hardy. All rights reserved.
+// </copyright>
 
 using App.Metrics.Apdex;
-using App.Metrics.Core.Abstractions;
-using App.Metrics.Core.Options;
 using App.Metrics.Counter;
 using App.Metrics.Facts.Fixtures;
 using App.Metrics.Gauge;
 using App.Metrics.Histogram;
 using App.Metrics.Meter;
-using App.Metrics.Meter.Extensions;
-using App.Metrics.Tagging;
 using App.Metrics.Timer;
 using FluentAssertions;
 using Xunit;
@@ -34,7 +31,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_apdex_value()
+        public void Can_get_apdex_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_apdex";
             var options = new ApdexOptions
@@ -49,7 +46,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_counter_value()
+        public void Can_get_apdex_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_apdex";
+            var options = new ApdexOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Apdex.Track(options, tags, () => _clock.Advance(TimeUnit.Seconds, 3));
+
+            _provider.GetApdexValue(Context, tags.AsMetricName(metricName)).Frustrating.Should().Be(1);
+        }
+
+        [Fact]
+        public void Can_get_counter_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_counter";
             var options = new CounterOptions
@@ -63,7 +76,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_gauge_value()
+        public void Can_get_counter_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_counter";
+            var options = new CounterOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Counter.Increment(options, tags);
+
+            _provider.GetCounterValue(Context, tags.AsMetricName(metricName)).Count.Should().Be(1);
+        }
+
+        [Fact]
+        public void Can_get_gauge_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_gauge";
             var options = new GaugeOptions
@@ -78,7 +107,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_histogram_value()
+        public void Can_get_gauge_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_gauge";
+            var options = new GaugeOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Gauge.SetValue(options, tags, () => 1.0);
+
+            _provider.GetGaugeValue(Context, tags.AsMetricName(metricName)).Should().Be(1);
+        }
+
+        [Fact]
+        public void Can_get_histogram_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_histogram";
             var options = new HistogramOptions
@@ -93,7 +138,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_meter_value()
+        public void Can_get_histogram_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_histogram";
+            var options = new HistogramOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Histogram.Update(options, tags, 1L);
+
+            _provider.GetHistogramValue(Context, tags.AsMetricName(metricName)).Count.Should().Be(1);
+        }
+
+        [Fact]
+        public void Can_get_meter_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_meter";
             var options = new MeterOptions
@@ -108,7 +169,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_apdex_value()
+        public void Can_get_meter_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_meter";
+            var options = new MeterOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Meter.Mark(options, tags, 1L);
+
+            _provider.GetMeterValue(Context, tags.AsMetricName(metricName)).Count.Should().Be(1);
+        }
+
+        [Fact]
+        public void Can_get_multidimensional_apdex_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_apdex_multi";
             var options = new ApdexOptions
@@ -123,7 +200,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_counter_value()
+        public void Can_get_multidimensional_counter_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_counter_multi";
             var options = new CounterOptions
@@ -138,7 +215,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_gauge_value()
+        public void Can_get_multidimensional_gauge_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_gauge_multi";
             var options = new GaugeOptions
@@ -153,7 +230,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_histogram_value()
+        public void Can_get_multidimensional_histogram_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_histogram_multi";
             var options = new HistogramOptions
@@ -168,7 +245,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_meter_value()
+        public void Can_get_multidimensional_meter_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_meter_multi";
             var options = new MeterOptions
@@ -183,7 +260,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_multidimensional_timer_value()
+        public void Can_get_multidimensional_timer_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_timer_multi";
             var options = new TimerOptions
@@ -198,7 +275,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void can_get_timer_value()
+        public void Can_get_timer_value()
         {
             var metricName = "DefaultMetricValuesProviderTests_timer";
             var options = new TimerOptions
@@ -213,7 +290,23 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_apdex()
+        public void Can_get_timer_value_with_tags()
+        {
+            var metricName = "DefaultMetricValuesProviderTests_timer";
+            var options = new TimerOptions
+                          {
+                              Name = metricName,
+                              Context = Context
+                          };
+            var tags = new MetricTags("key", "value");
+
+            _measure.Timer.Time(options, tags, () => { _clock.Advance(TimeUnit.Milliseconds, 1000); });
+
+            _provider.GetTimerValue(Context, tags.AsMetricName(metricName)).Histogram.Count.Should().Be(1);
+        }
+
+        [Fact]
+        public void Context_doesnt_exist_returns_default_apdex()
         {
             var metricName = "DefaultMetricValuesProviderTests_apdex_without_context";
             var options = new ApdexOptions
@@ -228,7 +321,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_apdex_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_apdex_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_apdex_without_context_multi";
             var options = new ApdexOptions
@@ -243,7 +336,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_counter()
+        public void Context_doesnt_exist_returns_default_counter()
         {
             var metricName = "DefaultMetricValuesProviderTests_counter_without_context";
             var options = new CounterOptions
@@ -258,7 +351,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_counter_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_counter_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_counter_without_context_multi";
             var options = new CounterOptions
@@ -273,7 +366,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_gauge()
+        public void Context_doesnt_exist_returns_default_gauge()
         {
             var metricName = "DefaultMetricValuesProviderTests_gauge_without_context";
             var options = new GaugeOptions
@@ -288,7 +381,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_gauge_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_gauge_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_gauge_without_context_multi";
             var options = new GaugeOptions
@@ -303,7 +396,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_histgoram()
+        public void Context_doesnt_exist_returns_default_histgoram()
         {
             var metricName = "DefaultMetricValuesProviderTests_histgoram_without_context";
             var options = new HistogramOptions
@@ -318,7 +411,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_histgoram_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_histgoram_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_histgoram_without_context_multi";
             var options = new HistogramOptions
@@ -333,7 +426,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_meter()
+        public void Context_doesnt_exist_returns_default_meter()
         {
             var metricName = "DefaultMetricValuesProviderTests_meter_without_context";
             var options = new MeterOptions
@@ -348,7 +441,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_meter_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_meter_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_meter_without_context_multi";
             var options = new MeterOptions
@@ -363,7 +456,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_timer()
+        public void Context_doesnt_exist_returns_default_timer()
         {
             var metricName = "DefaultMetricValuesProviderTests_timer_without_context";
             var options = new TimerOptions
@@ -378,7 +471,7 @@ namespace App.Metrics.Facts.Providers
         }
 
         [Fact]
-        public void context_doesnt_exist_returns_default_timer_when_multidimensional()
+        public void Context_doesnt_exist_returns_default_timer_when_multidimensional()
         {
             var metricName = "DefaultMetricValuesProviderTests_timer_without_context_multi";
             var options = new TimerOptions
